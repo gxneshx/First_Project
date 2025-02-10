@@ -1,5 +1,6 @@
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler, MessageHandler, \
+    filters, CallbackContext
 
 from gpt import ChatGptService
 from util import (load_message, load_prompt, send_text, send_image, show_main_menu, send_text_buttons, Dialog)
@@ -14,19 +15,11 @@ async def default_callback_handler(update: Update, context: ContextTypes.DEFAULT
             await random(update, context)
         elif query == 'end_btn':
             await start(update, context)
-    if dialog.mode == "talk":
-        if query == '1':
-            await cobain(update, context)
-        elif query == '2':
-            await queen(update, context)
-        elif query == '3':
-            await tolkien(update, context)
-        elif query == '4':
-            await nietzsche(update, context)
-        elif query == '5':
-            await hawking(update, context)
-        elif query == 'end_btn':
-            await start(update, context)
+
+# Buttons handler for the 'quiz' function
+async def quiz_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    query = update.callback_query.data
     if dialog.mode == "quiz":
         if query == 'quiz_prog':
             dialog.mode = "quiz_prog"
@@ -40,29 +33,52 @@ async def default_callback_handler(update: Update, context: ContextTypes.DEFAULT
         elif query == 'quiz_more':
             dialog.mode = "quiz_more"
             await questions(update, context)
-        elif query == 'change_theme':
+        elif query == 'quiz_change_theme':
             await quiz(update, context)
-        elif query == 'end_btn':
+        elif query == 'quiz_end_btn':
             await start(update, context)
+
+# Buttons handler for the 'talk' function
+async def talk_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    query = update.callback_query.data
+    if dialog.mode == "talk":
+        if query == 'talk_1':
+            await cobain(update, context)
+        elif query == 'talk_2':
+            await queen(update, context)
+        elif query == 'talk_3':
+            await tolkien(update, context)
+        elif query == 'talk_4':
+            await nietzsche(update, context)
+        elif query == 'talk_5':
+            await hawking(update, context)
+        elif query == 'talk_end_btn':
+            await start(update, context)
+
+# Buttons handler for the 'translator' function
+async def translator_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    query = update.callback_query.data
     if dialog.mode == "translator":
-        if query == 'english':
+        if query == 'translate_english':
             dialog.mode = "english"
             await languages(update, context)
-        elif query == 'german':
+        elif query == 'translate_german':
             dialog.mode = "german"
             await languages(update, context)
-        elif query == 'italian':
+        elif query == 'translate_italian':
             dialog.mode = "italian"
             await languages(update, context)
-        elif query == 'french':
+        elif query == 'translate_french':
             dialog.mode = "french"
             await languages(update, context)
-        elif query == 'spanish':
+        elif query == 'translate_spanish':
             dialog.mode = "spanish"
             await languages(update, context)
-        elif query == 'chg_lng':
+        elif query == 'translate_chg_lng':
             await translator(update, context)
-        elif query == 'end_btn':
+        elif query == 'translate_end_btn':
             await start(update, context)
 
 
@@ -115,12 +131,12 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_image(update, context, 'talk')
     dialog.mode = "talk"
     await send_text_buttons(update, context, text, {
-        "1" : "Курт Кобейн - Соліст гурту 'Nirvana'",
-        "2" : "Єлизавета II - Королева Об'єднаного Королівства",
-        "3" : "Джон Толкін - Автор 'Володаря Перснів'",
-        "4" : "Фрідріх Ніцше - Філософ",
-        "5" : "Стівен Гокінг - Астрофізик",
-        "end_btn": "Закінчити"
+        "talk_1" : "Курт Кобейн - Соліст гурту 'Nirvana'",
+        "talk_2" : "Єлизавета II - Королева Об'єднаного Королівства",
+        "talk_3" : "Джон Толкін - Автор 'Володаря Перснів'",
+        "talk_4" : "Фрідріх Ніцше - Філософ",
+        "talk_5" : "Стівен Гокінг - Астрофізик",
+        "talk_end_btn": "Закінчити"
     })
 
 # The function to imitate conversation between a user and Cobain. A part of the 'Talk' function
@@ -174,7 +190,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quiz_prog": "Програмування мовою Python",
         "quiz_math": "Математичні теорій - теорії алгоритмів, теорії множин та матаналізу",
         "quiz_biology": "Біологія",
-        "end_btn": "Закінчити"
+        "quiz_end_btn": "Закінчити"
     })
 
 # The function to handle text messages for the 'quiz' function.
@@ -186,8 +202,8 @@ async def handle_quiz_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     answer = await chat_gpt.send_message_list()
     await send_text_buttons(update, context, answer, {
         "quiz_more": "Інше питання на ту ж тему",
-        "change_theme": "Змінити тему",
-        "end_btn": "Закінчити"
+        "quiz_change_theme": "Змінити тему",
+        "quiz_end_btn": "Закінчити"
     })
 
 # The function to handle question according to the category button clicked.
@@ -227,12 +243,12 @@ async def translator(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prompt = load_prompt('translator')
     chat_gpt.set_prompt(prompt)
     await send_text_buttons(update, context, text, {
-        "english" : "Англійська",
-        "german" : "Німецька",
-        "italian" : "Італійська",
-        "french" : "Французька",
-        "spanish" : "Іспанська",
-        "end_btn": "Закінчити"
+        "translate_english" : "Англійська",
+        "translate_german" : "Німецька",
+        "translate_italian" : "Італійська",
+        "translate_french" : "Французька",
+        "translate_spanish" : "Іспанська",
+        "translate_end_btn": "Закінчити"
     })
 
 # The function to handle text messages for the 'translator' function.
@@ -242,8 +258,8 @@ async def handle_translator_message(update: Update, context: ContextTypes.DEFAUL
     await chat_gpt.add_message(text)
     answer = await chat_gpt.send_message_list()
     await send_text_buttons(update, context, answer, {
-        "chg_lng" : "Змінити мову",
-        "end_btn": "Закінчити"
+        "translate_chg_lng" : "Змінити мову",
+        "translate_end_btn": "Закінчити"
     })
 
 # The function to handle question according to the language button clicked.
@@ -313,5 +329,8 @@ app.add_handler(MessageHandler(filters.TEXT, handle_message))
 
 # Зареєструвати обробник колбеку можна так:
 # app.add_handler(CallbackQueryHandler(app_button, pattern='^app_.*'))
+app.add_handler(CallbackQueryHandler(quiz_callback_handler, pattern='^quiz_.*'))
+app.add_handler(CallbackQueryHandler(talk_callback_handler, pattern='^talk_.*'))
+app.add_handler(CallbackQueryHandler(translator_callback_handler, pattern='^translate_.*'))
 app.add_handler(CallbackQueryHandler(default_callback_handler))
 app.run_polling()
