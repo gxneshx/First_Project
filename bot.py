@@ -15,6 +15,11 @@ async def default_callback_handler(update: Update, context: ContextTypes.DEFAULT
             await random(update, context)
         elif query == 'end_btn':
             await start(update, context)
+    elif dialog.mode == "cv":
+        if query == 'cv_start_over':
+            await cv(update, context)
+        elif query == 'cv_end_btn':
+            await start(update, context)
 
 # Buttons handler for the 'quiz' function
 async def quiz_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,7 +99,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'gpt': 'Задати питання чату GPT 🤖',
         'talk': 'Поговорити з відомою особистістю 👤',
         'quiz': 'Взяти участь у квізі ❓',
-        'translator': 'Перекласти на обрану мову'
+        'translator': 'Перекласти на обрану мову',
+        'cv': 'Згенерувати резюме'
         # Додати команду в меню можна так:
         # 'command': 'button text'
     })
@@ -293,6 +299,23 @@ async def languages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, context, answer)
         dialog.mode = "translator"
 
+async def cv(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = load_message('cv')
+    await send_image(update, context, 'cv')
+    prompt = load_prompt('cv')
+    chat_gpt.set_prompt(prompt)
+    dialog.mode = "cv"
+    await send_text(update, context, text)
+
+async def handle_cv_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    await chat_gpt.add_message(text)
+    answer = await chat_gpt.send_message_list()
+    await send_text_buttons(update, context, answer, {
+        "cv_start_over": "Почати спочатку",
+        "cv_end_btn": "На головну"
+    })
+
 # The function to handle any text message. It gets a message from a user (in the 'text' var) and sends it to chatGPT
 # Then it gets an answer from chatGPT (in the 'answer' var) and sends it back to the user
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -300,7 +323,6 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     await chat_gpt.add_message(text)
     answer = await chat_gpt.send_message_list()
     await send_text(update, context, answer)
-
 
 # The function to handle messages depending on the dialog.mode status
 # So that chatGPT doesn't answer to the same theme when a different mode is enabled
@@ -313,6 +335,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_quiz_message(update, context)
     if dialog.mode == "translator":
         await handle_translator_message(update, context)
+    if dialog.mode == "cv":
+        await handle_cv_message(update, context)
 
 chat_gpt = ChatGptService(credentials.ChatGPT_TOKEN)
 app = ApplicationBuilder().token(credentials.BOT_TOKEN).build()
@@ -325,6 +349,7 @@ app.add_handler(CommandHandler('gpt', gpt))
 app.add_handler(CommandHandler('talk', talk))
 app.add_handler(CommandHandler('quiz', quiz))
 app.add_handler(CommandHandler('translator', translator))
+app.add_handler(CommandHandler('cv', cv))
 app.add_handler(MessageHandler(filters.TEXT, handle_message))
 
 # Зареєструвати обробник колбеку можна так:

@@ -1,4 +1,5 @@
 .idea
 .venv
 credentials.py
+tasks.md
 __pycache__
