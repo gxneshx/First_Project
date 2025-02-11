@@ -28,16 +28,16 @@ async def quiz_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
     if dialog.mode == "quiz":
         if query == 'quiz_prog':
             dialog.mode = "quiz_prog"
-            await questions(update, context)
+            await quiz_questions(update, context)
         elif query == 'quiz_math':
             dialog.mode = "quiz_math"
-            await questions(update, context)
+            await quiz_questions(update, context)
         elif query == 'quiz_biology':
             dialog.mode = "quiz_biology"
-            await questions(update, context)
+            await quiz_questions(update, context)
         elif query == 'quiz_more':
             dialog.mode = "quiz_more"
-            await questions(update, context)
+            await quiz_questions(update, context)
         elif query == 'quiz_change_theme':
             await quiz(update, context)
         elif query == 'quiz_end_btn':
@@ -199,7 +199,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quiz_end_btn": "Закінчити"
     })
 
-# The function to handle text messages for the 'quiz' function.
+# The function to handle text messages for the 'quiz' function only.
 # It gets a message from a user (in the 'text' var) and sends it to chatGPT
 # Then it gets an answer from chatGPT (in the 'answer' var) and sends it back to the user adding few buttons
 async def handle_quiz_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -214,7 +214,7 @@ async def handle_quiz_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # The function to handle question according to the category button clicked.
 # It sends a mini-prompt about the category to chatGPT, receives a question, and sends it to the user
-async def questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def quiz_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if dialog.mode == "quiz_prog":
         await send_image(update, context, 'quiz')
         await chat_gpt.add_message('quiz_prog')
@@ -257,7 +257,7 @@ async def translator(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "translate_end_btn": "Закінчити"
     })
 
-# The function to handle text messages for the 'translator' function.
+# The function to handle text messages for the 'translator' function only.
 # It sends text to be translated to chatGPT, receives translated text, and sends it to the user adding few buttons
 async def handle_translator_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -299,6 +299,8 @@ async def languages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_text(update, context, answer)
         dialog.mode = "translator"
 
+
+# The 'curriculum vitae' function
 async def cv(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = load_message('cv')
     await send_image(update, context, 'cv')
@@ -307,6 +309,7 @@ async def cv(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "cv"
     await send_text(update, context, text)
 
+# The function to handle text messages for the 'curriculum vitae' function only.
 async def handle_cv_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     await chat_gpt.add_message(text)
@@ -315,6 +318,7 @@ async def handle_cv_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "cv_start_over": "Почати спочатку",
         "cv_end_btn": "На головну"
     })
+
 
 # The function to handle any text message. It gets a message from a user (in the 'text' var) and sends it to chatGPT
 # Then it gets an answer from chatGPT (in the 'answer' var) and sends it back to the user
