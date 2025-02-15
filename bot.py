@@ -100,11 +100,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'talk': 'Поговорити з відомою особистістю 👤',
         'quiz': 'Взяти участь у квізі ❓',
         'translator': 'Перекласти на обрану мову',
+        'image_recognition': 'Розпізнавання зображень',
         'cv': 'Згенерувати резюме'
         # Додати команду в меню можна так:
         # 'command': 'button text'
     })
 
+async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "image_recognition"
+    text = load_message('image_recognition')
+    await send_image(update, context, 'image_recognition')
+    await send_text(update, context, text)
+    prompt = load_prompt('image_recognition')
+    chat_gpt.set_prompt(prompt)
+
+async def handle_image_recognition_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file_id = update.message.photo[-1].file_id
+    bot = update.get_bot()
+    file = await bot.get_file(file_id)
+    byte_array = await file.download_as_bytearray()
+    await chat_gpt.add_message(f"{byte_array}")
+    answer = await chat_gpt.send_message_list()
+    await send_text(update, context, answer)
 
 # The 'Random' function
 async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -203,6 +220,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # It gets a message from a user (in the 'text' var) and sends it to chatGPT
 # Then it gets an answer from chatGPT (in the 'answer' var) and sends it back to the user adding few buttons
 async def handle_quiz_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # if dialog.mode == "quiz_prog" or dialog.mode == "quiz_math" or dialog.mode == "quiz_biology":
     text = update.message.text
     await chat_gpt.add_message(text)
     answer = await chat_gpt.send_message_list()
@@ -217,25 +235,25 @@ async def handle_quiz_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def quiz_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if dialog.mode == "quiz_prog":
         await send_image(update, context, 'quiz')
-        await chat_gpt.add_message('quiz_prog')
+        await chat_gpt.add_message('Python')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
         dialog.mode = "quiz"
     elif dialog.mode == "quiz_math":
         await send_image(update, context, 'quiz')
-        await chat_gpt.add_message('quiz_math')
+        await chat_gpt.add_message('Math')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
         dialog.mode = "quiz"
     elif dialog.mode == "quiz_biology":
         await send_image(update, context, 'quiz')
-        await chat_gpt.add_message('quiz_biology')
+        await chat_gpt.add_message('Biology')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
         dialog.mode = "quiz"
     elif dialog.mode == "quiz_more":
         await send_image(update, context, 'quiz')
-        await chat_gpt.add_message('quiz_more')
+        await chat_gpt.add_message('більше')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
         dialog.mode = "quiz"
@@ -339,6 +357,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_quiz_message(update, context)
     if dialog.mode == "translator":
         await handle_translator_message(update, context)
+    if dialog.mode == "image_recognition":
+        await handle_image_recognition_message(update, context)
     if dialog.mode == "cv":
         await handle_cv_message(update, context)
 
@@ -353,8 +373,10 @@ app.add_handler(CommandHandler('gpt', gpt))
 app.add_handler(CommandHandler('talk', talk))
 app.add_handler(CommandHandler('quiz', quiz))
 app.add_handler(CommandHandler('translator', translator))
+app.add_handler(CommandHandler('image_recognition', image_recognition))
 app.add_handler(CommandHandler('cv', cv))
 app.add_handler(MessageHandler(filters.TEXT, handle_message))
+app.add_handler(MessageHandler(filters.PHOTO, handle_image_recognition_message))
 
 # Зареєструвати обробник колбеку можна так:
 # app.add_handler(CallbackQueryHandler(app_button, pattern='^app_.*'))
