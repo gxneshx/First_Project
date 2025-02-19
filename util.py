@@ -96,3 +96,6 @@ async def default_callback_handler(update: Update,
 
 class Dialog:
     mode = "default"
+    quiz_theme = "None"
+    translation = "not started"
+    category = "None"

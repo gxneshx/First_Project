@@ -26,22 +26,29 @@ async def default_callback_handler(update: Update, context: ContextTypes.DEFAULT
 async def quiz_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     query = update.callback_query.data
-    if dialog.mode == "quiz":
+    if dialog.mode == "quiz" or dialog.mode == "quiz_started":
         if query == 'quiz_prog':
-            dialog.mode = "quiz_prog"
+            dialog.mode = "quiz_started"
+            dialog.quiz_theme = "quiz_prog"
             await quiz_questions(update, context)
         elif query == 'quiz_math':
-            dialog.mode = "quiz_math"
+            dialog.mode = "quiz_started"
+            dialog.quiz_theme = "quiz_math"
             await quiz_questions(update, context)
         elif query == 'quiz_biology':
-            dialog.mode = "quiz_biology"
+            dialog.mode = "quiz_started"
+            dialog.quiz_theme = "quiz_biology"
             await quiz_questions(update, context)
         elif query == 'quiz_more':
-            dialog.mode = "quiz_more"
+            dialog.quiz_theme = "quiz_more"
             await quiz_questions(update, context)
         elif query == 'quiz_change_theme':
+            dialog.mode = "quiz_change_theme"
+            dialog.quiz_theme = "quiz_change_theme"
             await quiz(update, context)
         elif query == 'quiz_end_btn':
+            dialog.mode = "quiz_ended"
+            dialog.quiz_theme = "quiz_ended"
             await start(update, context)
 
 # Buttons handler for the 'talk' function
@@ -60,6 +67,7 @@ async def talk_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         elif query == 'talk_5':
             await hawking(update, context)
         elif query == 'talk_end_btn':
+            dialog.mode = "dialog_ended"
             await start(update, context)
 
 # Buttons handler for the 'translator' function
@@ -68,46 +76,58 @@ async def translator_callback_handler(update: Update, context: ContextTypes.DEFA
     query = update.callback_query.data
     if dialog.mode == "translator":
         if query == 'translate_english':
+            dialog.translation = "started"
             dialog.mode = "english"
             await languages(update, context)
         elif query == 'translate_german':
+            dialog.translation = "started"
             dialog.mode = "german"
             await languages(update, context)
         elif query == 'translate_italian':
+            dialog.translation = "started"
             dialog.mode = "italian"
             await languages(update, context)
         elif query == 'translate_french':
+            dialog.translation = "started"
             dialog.mode = "french"
             await languages(update, context)
         elif query == 'translate_spanish':
+            dialog.translation = "started"
             dialog.mode = "spanish"
             await languages(update, context)
-        elif query == 'translate_chg_lng':
+        elif query == 'translate_change':
+            dialog.translation = "None"
+            dialog.mode = "change_lang"
             await translator(update, context)
-        elif query == 'translate_end_btn':
+        elif query == 'translate_end':
+            dialog.translation = "not started"
+            dialog.mode = "ended"
             await start(update, context)
 
 # Buttons handler for the 'recommendations' function
 async def recommendations_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     query = update.callback_query.data
-    if dialog.mode == "recommendations":
-        if query == 'recommendations_dislike':
-            await chat_gpt.add_message("не подобається")
-            await handle_rec_message(update, context)
-        elif query == 'recommendations_movies':
-            await send_text(update, context, "Жанр")
-            await chat_gpt.add_message("фільми")
-            await handle_rec_message(update, context)
+    if dialog.mode == "recommendations" or dialog.mode == "recommendations_started":
+        if query == 'recommendations_movies':
+            dialog.mode = "recommendations_started"
+            dialog.category = "movies"
+            await category(update, context)
         elif query == 'recommendations_books':
-            await send_text(update, context, "Жанр")
-            await chat_gpt.add_message("книги")
-            await handle_rec_message(update, context)
+            dialog.mode = "recommendations_started"
+            dialog.category = "books"
+            await category(update, context)
         elif query == 'recommendations_music':
-            await send_text(update, context, "Жанр")
-            await chat_gpt.add_message("музика")
-            await handle_rec_message(update, context)
+            dialog.mode = "recommendations_started"
+            dialog.category = "music"
+            await category(update, context)
+        elif query == 'recommendations_dislike':
+            dialog.mode = "recommendations_started"
+            dialog.category = "dislike"
+            await category(update, context)
         elif query == 'recommendations_end_btn':
+            dialog.mode = "recommendations_ended"
+            dialog.category = "ended"
             await start(update, context)
 
 # The 'Start' function
@@ -174,6 +194,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # The function to imitate conversation between a user and Cobain. A part of the 'Talk' function
 # It sends a picture of him and sets a prompt to ChatGPT to impersonate him
 async def cobain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "dialog_started"
     await send_image(update, context, 'talk_cobain')
     await send_text(update, context, 'Привіт. Кобейн говорить. Шо там по питаннях?')
     prompt = load_prompt("talk_cobain")
@@ -182,6 +203,7 @@ async def cobain(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # The function to imitate conversation between a user and Hawking. A part of the 'Talk' function
 # It sends a picture of him and sets a prompt to ChatGPT to impersonate him
 async def hawking(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "dialog_started"
     await send_image(update, context, 'talk_hawking')
     await send_text(update, context, "Вітаю. Це Сті́вен Ві́льям Го́кінг. Радий зустрічі.")
     prompt = load_prompt("talk_hawking")
@@ -190,6 +212,7 @@ async def hawking(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # The function to imitate conversation between a user and Nietzsche. A part of the 'Talk' function
 # It sends a picture of him and sets a prompt to ChatGPT to impersonate him
 async def nietzsche(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "dialog_started"
     await send_image(update, context, 'talk_nietzsche')
     await send_text(update, context, "Guten Tag. Подискутуємо?")
     prompt = load_prompt("talk_nietzsche")
@@ -198,6 +221,7 @@ async def nietzsche(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # The function to imitate conversation between a user and Queen. A part of the 'Talk' function
 # It sends a picture of her and sets a prompt to ChatGPT to impersonate her
 async def queen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "dialog_started"
     await send_image(update, context, 'talk_queen')
     await send_text(update, context, "Наливайте 'Ерл Ґрей', до Вас Королева говорить.")
     prompt = load_prompt("talk_queen")
@@ -206,6 +230,7 @@ async def queen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # The function to imitate conversation between a user and Tolkien. A part of the 'Talk' function
 # It sends a picture of him and sets a prompt to ChatGPT to impersonate him
 async def tolkien(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "dialog_started"
     await send_image(update, context, 'talk_tolkien')
     await send_text(update, context, "Вітання із Середзем'я. Запитуйте.")
     prompt = load_prompt("talk_tolkien")
@@ -242,30 +267,26 @@ async def handle_quiz_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 # The function to handle question according to the category button clicked.
 # It sends a mini-prompt about the category to chatGPT, receives a question, and sends it to the user
 async def quiz_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if dialog.mode == "quiz_prog":
+    if dialog.quiz_theme == "quiz_prog":
         await send_image(update, context, 'quiz')
         await chat_gpt.add_message('Python')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
-        dialog.mode = "quiz"
-    elif dialog.mode == "quiz_math":
+    elif dialog.quiz_theme == "quiz_math":
         await send_image(update, context, 'quiz')
         await chat_gpt.add_message('Math')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
-        dialog.mode = "quiz"
-    elif dialog.mode == "quiz_biology":
+    elif dialog.quiz_theme == "quiz_biology":
         await send_image(update, context, 'quiz')
         await chat_gpt.add_message('Biology')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
-        dialog.mode = "quiz"
-    elif dialog.mode == "quiz_more":
+    elif dialog.quiz_theme == "quiz_more":
         await send_image(update, context, 'quiz')
         await chat_gpt.add_message('більше')
         answer = await chat_gpt.send_message_list()
         await send_text(update, context, answer)
-        dialog.mode = "quiz"
 
 
 # The 'Voice ChatGPT' function
@@ -300,6 +321,28 @@ async def handle_rec_message(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "recommendations_end_btn": "Закінчити"
     })
 
+# The function to handle different categories depending on the chosen button.
+async def category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if dialog.category == "movies":
+        await chat_gpt.add_message("Фільми")
+        answer = await chat_gpt.send_message_list()
+        await send_text(update, context, answer)
+    elif dialog.category == "books":
+        await chat_gpt.add_message("Книги")
+        answer = await chat_gpt.send_message_list()
+        await send_text(update, context, answer)
+    elif dialog.category == "music":
+        await chat_gpt.add_message("Музика")
+        answer = await chat_gpt.send_message_list()
+        await send_text(update, context, answer)
+    elif dialog.category == "dislike":
+        await chat_gpt.add_message("Не подобається. Надішли інше у тій же категорії та жанрі")
+        answer = await chat_gpt.send_message_list()
+        await send_text_buttons(update, context, answer, {
+            "recommendations_dislike": "Не подобається",
+            "recommendations_end_btn": "Закінчити"
+        })
+
 
 # The 'Translation' function
 async def translator(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -314,7 +357,7 @@ async def translator(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "translate_italian" : "Італійська",
         "translate_french" : "Французька",
         "translate_spanish" : "Іспанська",
-        "translate_end_btn": "Закінчити"
+        "translate_end": "Закінчити"
     })
 
 # The function to handle text messages for the 'translator' function only.
@@ -324,8 +367,8 @@ async def handle_translator_message(update: Update, context: ContextTypes.DEFAUL
     await chat_gpt.add_message(text)
     answer = await chat_gpt.send_message_list()
     await send_text_buttons(update, context, answer, {
-        "translate_chg_lng" : "Змінити мову",
-        "translate_end_btn": "Закінчити"
+        "translate_change" : "Змінити мову",
+        "translate_end": "Закінчити"
     })
 
 # The function to handle question according to the language button clicked.
@@ -434,15 +477,15 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if dialog.mode == "gpt":
         await handle_text_message(update, context)
-    if dialog.mode == "talk":
+    if dialog.mode == "dialog_started":
         await handle_text_message(update, context)
-    if dialog.mode == "quiz":
+    if dialog.mode == "quiz_started":
         await handle_quiz_message(update, context)
-    if dialog.mode == "translator":
+    if dialog.translation == "started":
         await handle_translator_message(update, context)
     if dialog.mode == "voice_chat_gpt":
         await handle_voice(update, context)
-    if dialog.mode == "recommendations":
+    if dialog.mode == "recommendations_started":
         await handle_rec_message(update, context)
     if dialog.mode == "image_recognition":
         await handle_text_message(update, context)

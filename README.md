@@ -13,9 +13,10 @@ It has several functions:
    The following languages: English, German, Italian, French, Spanish.
 6. Voice ChatGPT. 
    One sends voice messages and receives voice answers from ChatGPT. Can be slow sometimes.
+   This feature can be used anywhere in the bot byt the way.
 7. Movies, books, music recommendations. 
    As it states, the function recommends movies, books, or music. One needs to choose a theme first. 
-   Then, you'll be asked to enter a genre. Then, the bot will send recommendations. 
+   Then, you'll be asked to enter a genre or something additional. Then, the bot will send recommendations. 
    It can be extremely slow sometimes, brace yourselves. 
    Also, due to how AI chats interpret prompts, there will always be multiple recommendations.
 8. Image recognizer. 
