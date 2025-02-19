@@ -2,7 +2,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, \
     BotCommand, MenuButtonCommands, BotCommandScopeChat, MenuButtonDefault
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import ContextTypes, CallbackContext, ConversationHandler
+from telegram.ext import ContextTypes
 
 
 # конвертує об'єкт user в рядок

@@ -1,10 +1,11 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler, MessageHandler, \
-    filters, CallbackContext
+    filters
 
 from gpt import ChatGptService
-from util import (load_message, load_prompt, send_text, send_image, show_main_menu, send_text_buttons, Dialog)
-import credentials
+from util import (load_message, load_prompt, send_text, send_image, show_main_menu, send_text_buttons, Dialog,
+                  send_html)
+import credentials, os
 
 # Buttons handler for different functions
 async def default_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -86,13 +87,35 @@ async def translator_callback_handler(update: Update, context: ContextTypes.DEFA
         elif query == 'translate_end_btn':
             await start(update, context)
 
+# Buttons handler for the 'recommendations' function
+async def recommendations_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    query = update.callback_query.data
+    if dialog.mode == "recommendations":
+        if query == 'recommendations_dislike':
+            await chat_gpt.add_message("не подобається")
+            await handle_rec_message(update, context)
+        elif query == 'recommendations_movies':
+            await send_text(update, context, "Жанр")
+            await chat_gpt.add_message("фільми")
+            await handle_rec_message(update, context)
+        elif query == 'recommendations_books':
+            await send_text(update, context, "Жанр")
+            await chat_gpt.add_message("книги")
+            await handle_rec_message(update, context)
+        elif query == 'recommendations_music':
+            await send_text(update, context, "Жанр")
+            await chat_gpt.add_message("музика")
+            await handle_rec_message(update, context)
+        elif query == 'recommendations_end_btn':
+            await start(update, context)
 
 # The 'Start' function
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "default"
     text = load_message('main')
     await send_image(update, context, 'main')
-    await send_text(update, context, text)
+    await send_html(update, context, text)
     await show_main_menu(update, context, {
         'start': 'Головне меню',
         'random': 'Дізнатися випадковий цікавий факт 🧠',
@@ -100,28 +123,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'talk': 'Поговорити з відомою особистістю 👤',
         'quiz': 'Взяти участь у квізі ❓',
         'translator': 'Перекласти на обрану мову',
+        'voice_chat_gpt': 'Голосовий ChatGPT',
+        'recommendations': 'Рекомендації щодо фільмів, книг та музики',
         'image_recognition': 'Розпізнавання зображень',
         'cv': 'Згенерувати резюме'
         # Додати команду в меню можна так:
         # 'command': 'button text'
     })
 
-async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "image_recognition"
-    text = load_message('image_recognition')
-    await send_image(update, context, 'image_recognition')
-    await send_text(update, context, text)
-    prompt = load_prompt('image_recognition')
-    chat_gpt.set_prompt(prompt)
-
-async def handle_image_recognition_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file_id = update.message.photo[-1].file_id
-    bot = update.get_bot()
-    file = await bot.get_file(file_id)
-    byte_array = await file.download_as_bytearray()
-    await chat_gpt.add_message(f"{byte_array}")
-    answer = await chat_gpt.send_message_list()
-    await send_text(update, context, answer)
 
 # The 'Random' function
 async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -259,6 +268,39 @@ async def quiz_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dialog.mode = "quiz"
 
 
+# The 'Voice ChatGPT' function
+async def voice_chat_gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = load_message('voice_chat_gpt')
+    await send_image(update, context, 'voice_chat_gpt')
+    await send_text(update, context, text)
+    dialog.mode = "voice_chat_gpt"
+
+
+# The 'Movies, Books, Music recommendations' function
+async def recommendations(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = load_message('recommendations')
+    await send_image(update, context, 'recommendations')
+    chat_gpt.set_prompt("recommendations")
+    dialog.mode = "recommendations"
+    await send_text_buttons(update, context, text, {
+        "recommendations_movies": "Фільми",
+        "recommendations_books": "Книги",
+        "recommendations_music": "Музика",
+        "recommendations_end_btn": "Закінчити"
+    })
+
+# The function to handle text messages for the 'recommendations' function only.
+# It sends text to chatGPT, receives text, and sends it to the user adding a couple of buttons
+async def handle_rec_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    await chat_gpt.add_message(text)
+    answer = await chat_gpt.send_message_list()
+    await send_text_buttons(update, context, answer, {
+        "recommendations_dislike": "Не подобається",
+        "recommendations_end_btn": "Закінчити"
+    })
+
+
 # The 'Translation' function
 async def translator(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = load_message('translator')
@@ -318,6 +360,30 @@ async def languages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dialog.mode = "translator"
 
 
+# The "Image recognition" function
+async def image_recognition(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "image_recognition"
+    text = load_message('image_recognition')
+    await send_image(update, context, 'image_recognition')
+    await send_text(update, context, text)
+    prompt = load_prompt('image_recognition')
+    chat_gpt.set_prompt(prompt)
+
+# The function to handle images.
+# It downloads an image, and sends its path to the 'recognize_image' function in the 'gpt.py' module,
+# receives an answer, and sends it to the user
+# The picture must be less than 10 MB due to the chat version restrictions
+async def handle_image_recognition_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file_id = update.message.photo[-1].file_id
+    bot = update.get_bot()
+    file = await bot.get_file(file_id)
+    path = await file.download_to_drive("image.jpg")
+    answer = await chat_gpt.recognize_image(path, chat_gpt.client)
+    await send_text(update, context, answer)
+    if os.path.exists(path):
+        os.remove(path)
+
+
 # The 'curriculum vitae' function
 async def cv(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = load_message('cv')
@@ -338,7 +404,23 @@ async def handle_cv_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
 
-# The function to handle any text message. It gets a message from a user (in the 'text' var) and sends it to chatGPT
+# Unique voice handler function
+# It gets a voice file ID, downloads the file, and sends it to a function in the 'gpt.py' module to get text from audio
+# Then, it sends the text to ChatGPT, receives text answer, converts it to audio, and sends it back to the user
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file_id = update.message.voice.file_id
+    bot = update.get_bot()
+    file = await bot.get_file(file_id)
+    path = await file.download_to_drive('user_voice.mp3')
+    text = await chat_gpt.speech_to_text(path, chat_gpt.client)
+    await chat_gpt.add_message(text)
+    text_answer = await chat_gpt.send_message_list()
+    await chat_gpt.text_to_speech(text_answer, chat_gpt.client)
+    chat_id = update.message.chat_id
+    await bot.send_voice(chat_id, "answer.mp3")
+
+
+# Unique text handler function. It gets a message from a user (in the 'text' var) and sends it to chatGPT
 # Then it gets an answer from chatGPT (in the 'answer' var) and sends it back to the user
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -346,7 +428,8 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     answer = await chat_gpt.send_message_list()
     await send_text(update, context, answer)
 
-# The function to handle messages depending on the dialog.mode status
+
+# The function to decide how to handle messages depending on the dialog.mode status
 # So that chatGPT doesn't answer to the same theme when a different mode is enabled
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if dialog.mode == "gpt":
@@ -357,8 +440,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_quiz_message(update, context)
     if dialog.mode == "translator":
         await handle_translator_message(update, context)
+    if dialog.mode == "voice_chat_gpt":
+        await handle_voice(update, context)
+    if dialog.mode == "recommendations":
+        await handle_rec_message(update, context)
     if dialog.mode == "image_recognition":
-        await handle_image_recognition_message(update, context)
+        await handle_text_message(update, context)
     if dialog.mode == "cv":
         await handle_cv_message(update, context)
 
@@ -373,9 +460,12 @@ app.add_handler(CommandHandler('gpt', gpt))
 app.add_handler(CommandHandler('talk', talk))
 app.add_handler(CommandHandler('quiz', quiz))
 app.add_handler(CommandHandler('translator', translator))
+app.add_handler(CommandHandler('voice_chat_gpt', voice_chat_gpt))
+app.add_handler(CommandHandler('recommendations', recommendations))
 app.add_handler(CommandHandler('image_recognition', image_recognition))
 app.add_handler(CommandHandler('cv', cv))
 app.add_handler(MessageHandler(filters.TEXT, handle_message))
+app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 app.add_handler(MessageHandler(filters.PHOTO, handle_image_recognition_message))
 
 # Зареєструвати обробник колбеку можна так:
@@ -383,5 +473,6 @@ app.add_handler(MessageHandler(filters.PHOTO, handle_image_recognition_message))
 app.add_handler(CallbackQueryHandler(quiz_callback_handler, pattern='^quiz_.*'))
 app.add_handler(CallbackQueryHandler(talk_callback_handler, pattern='^talk_.*'))
 app.add_handler(CallbackQueryHandler(translator_callback_handler, pattern='^translate_.*'))
+app.add_handler(CallbackQueryHandler(recommendations_callback_handler, pattern='^recommendations_.*'))
 app.add_handler(CallbackQueryHandler(default_callback_handler))
 app.run_polling()
