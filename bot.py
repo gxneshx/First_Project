@@ -1,11 +1,20 @@
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, CommandHandler, MessageHandler, \
     filters
 
 from gpt import ChatGptService
 from util import (load_message, load_prompt, send_text, send_image, show_main_menu, send_text_buttons, Dialog,
                   send_html)
-import credentials, os
+import credentials, os, html, json, logging, traceback
+
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# Set higher logging level for httpx to avoid all GET and POST requests being logged
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+
 
 # Buttons handler for different functions
 async def default_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -129,6 +138,7 @@ async def recommendations_callback_handler(update: Update, context: ContextTypes
             dialog.mode = "recommendations_ended"
             dialog.category = "ended"
             await start(update, context)
+
 
 # The 'Start' function
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -451,16 +461,20 @@ async def handle_cv_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # It gets a voice file ID, downloads the file, and sends it to a function in the 'gpt.py' module to get text from audio
 # Then, it sends the text to ChatGPT, receives text answer, converts it to audio, and sends it back to the user
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file_id = update.message.voice.file_id
-    bot = update.get_bot()
-    file = await bot.get_file(file_id)
-    path = await file.download_to_drive('user_voice.mp3')
-    text = await chat_gpt.speech_to_text(path, chat_gpt.client)
-    await chat_gpt.add_message(text)
-    text_answer = await chat_gpt.send_message_list()
-    await chat_gpt.text_to_speech(text_answer, chat_gpt.client)
-    chat_id = update.message.chat_id
-    await bot.send_voice(chat_id, "answer.mp3")
+    try:
+        file_id = update.message.voice.file_id
+    except AttributeError as e:
+        logger.error("A writing attempt was made in the 'Voice' function.", exc_info=context.error)
+    else:
+        bot = update.get_bot()
+        file = await bot.get_file(file_id)
+        path = await file.download_to_drive('user_voice.mp3')
+        text = await chat_gpt.speech_to_text(path, chat_gpt.client)
+        await chat_gpt.add_message(text)
+        text_answer = await chat_gpt.send_message_list()
+        await chat_gpt.text_to_speech(text_answer, chat_gpt.client)
+        chat_id = update.message.chat_id
+        await bot.send_voice(chat_id, "answer.mp3")
 
 
 # Unique text handler function. It gets a message from a user (in the 'text' var) and sends it to chatGPT
@@ -491,6 +505,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_text_message(update, context)
     if dialog.mode == "cv":
         await handle_cv_message(update, context)
+
+
+# The error handler function
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log the error and send a telegram message to notify the developer."""
+
+    # Log the error before we do anything else, so we can see it even if something breaks.
+    logger.error("Exception while handling an update:", exc_info=context.error)
+
+    # traceback.format_exception returns the usual python message about an exception, but as a list of strings
+    # rather than a single string, so we have to join them together.
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_string = "\n".join(tb_list)
+
+    # Build the message with some markup and additional information about what happened.
+    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+    message = (
+        "An exception was raised while handling an update\n"
+        f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
+        "</pre>\n\n"
+        f"<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n"
+        f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
+        f"<pre>{html.escape(tb_string)}</pre>"
+    )
+    # Send the message
+    await context.bot.send_message(chat_id=update.message.chat_id, text=message, parse_mode=ParseMode.HTML)
+
 
 chat_gpt = ChatGptService(credentials.ChatGPT_TOKEN)
 app = ApplicationBuilder().token(credentials.BOT_TOKEN).build()

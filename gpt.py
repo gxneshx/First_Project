@@ -62,7 +62,7 @@ class ChatGptService:
 
     async def send_message_list(self) -> str:
         completion = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",  # gpt-4o,  gpt-4-turbo,  gpt-3.5-turbo,  gpt-4o-mini - the best for transcriptions
+            model="gpt-4o-mini",  # gpt-4o,  gpt-4-turbo,  gpt-3.5-turbo,  gpt-4o-mini - the best for transcriptions
             messages=self.message_list,
             max_tokens=3000,
             temperature=0.9
